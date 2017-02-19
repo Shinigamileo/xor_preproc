@@ -19,6 +19,9 @@ def myopen(f):
 
 def do_all(f, l):
     for e in l: f(e)
+
+def swap(tab,i,j):
+    tab[i],tab[j] = tab[j],tab[i]
     
 #
 class MyArray(array):
@@ -65,4 +68,36 @@ def luby(y,x): # copied from Minisat implementation
 
     return y ** seq
 
+    
+#############
+# BINVECTOR #
+#############
 
+class BinEquation():
+    _vector = []
+    result = 0
+
+    def __init__(self, binvars, result):
+        self._vector = binvars[0:]
+        self.result = result
+
+    def elements(self):
+        return [i for i in range(len(self._vector)) if self[i]]
+
+    def __add__(self, other):
+        return BinEquation([self._vector[i] ^ other._vector[i]
+                            for i in range(len(self._vector))],
+                           self.result ^ other.result)
+
+    def __str__(self):
+        return " ".join(list(map(lambda x:str(x),self._vector)))\
+            + " | " + str(self.result)
+
+    def __getitem__(self, x):
+        return self._vector[x]
+
+    def __setitem__(self, x, itm):
+        self._vector[x] = itm
+
+    def __len__(self):
+        return len(self._vector)
