@@ -162,6 +162,8 @@ class XorSolver():
                     if i != r and self._xlauses[i][j]:
                         self._xlauses[i] += self._xlauses[r]
                 r += 1
+                # print("")
+                # self.printXlauses()
             j += 1
             
         
