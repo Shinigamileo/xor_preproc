@@ -1,4 +1,4 @@
-from sattypes import *
+from mysattypes import *
 from math import *
 import time, sys, random
 
@@ -25,6 +25,7 @@ def readFile(solver, filename):
 
     print("c File readed in {t:03.2f}s".format(t=time.time()-starttime))
     
+    
 ##############
 # XOR SOLVER #
 ##############
@@ -36,16 +37,25 @@ class XorSolver():
 
     _nbvars  = 0  # Number of variables
     _clauses = [] # Clauses
+    _xor2add = []
+    _xornadd = []
     _xlauses = [] # XOR-Clauses
     _xvars   = []
+    _xvarsnb = []
     _tvars   = []
+    _learnt  = []
 
     def __init__(self):
         self._nbvars  = 0
         self._clauses = []
+        self._xor2add = []
+        self._xornadd = []
         self._xlauses = []
         self._xvars   = []
+        self._xvarsnb = []
         self._tvars   = []
+        self._learnt  = []
+        self._known   = []
         return
 
     def printClauses(self):
@@ -58,10 +68,14 @@ class XorSolver():
 
     def addClause(self, listOfInts):
         """Add a clause... that's about it"""
-        c = Clause([intToLit(l) for l in listOfInts])
-        if not c.isUseless():
-            self._clauses.append(c)
-            self._nbvars = max(self._nbvars, max(abs(i) for i in listOfInts))
+        c = Clause(listOfInts)
+        if not c.useless:
+            variables = c.variables()
+            if len(variables) == 1:
+                self._learnt.append(c[variables[0]])
+            else:
+                self._clauses.append(c)
+                self._nbvars = max(self._nbvars, max(abs(i) for i in listOfInts))
 
     def addXlause(self, listOfVars, result):
         xlause = []
@@ -96,14 +110,16 @@ class XorSolver():
         self._sortingSortSortingThatSorts()
         self._noNoDuplicatesNoNoNo()
 
-    def ctox(self):
+    def _gatherXlausesFromClauses(self):
         """Create the Xlauses from the clauses,
         returns the number of those found"""
         count = 0      # The count we commented about the line above. Witness !
         lines2del = [] # The lines which will be removed from the clauses
-        xor2add = []   # The lines which will be added to the Xlauses
         cvars = set()  # The variables present in the clauses
         xvars = set()  # The variables present in the Xlauses
+
+        self._xvarsnb = [[] for i in range(self._nbvars)]
+        xor2addi = len(self._xor2add)
 
         # To begin with, we must gather the Xlauses
         begin = 0
@@ -129,24 +145,45 @@ class XorSolver():
                         # then we found a Xlause !
                         count += 1
                         lines2del += xors[k]
-                        xor2add.append([variables,k])
+                        self._xor2add.append([variables,k])
                         xvars |= set(variables)
+                        for v in variables:
+                            self._xvarsnb[v-1].append(xor2addi)
+                        xor2addi += 1
             else:
                 cvars |= set(variables)
             begin = end
 
         # Now, we can update the self itself, which means :
         # - suppressing the clauses now useless
-        for i in sorted(lines2del, reverse=True):
-            del self._clauses[i]
+        deleteAll(self._clauses,lines2del)
         # - writing down the variables in the Xlauses and those only
-        self._xvars = sorted(list(xvars))
-        self._tvars = sorted(list(xvars - cvars))
-        # - fabriquer correctement la matrice sur laquelle on fera des Gauss
-        for x in xor2add:
-            self.addXlause(x[0],x[1])
+        self._xvars = sorted(list(xvars | set(self._xvars)))
+        self._tvars = sorted(list(set(self._xvars) - cvars))
                    
         return count
+
+    
+
+    def _createMatrix(self):
+        print(self._xvarsnb)
+        print(self._tvars)
+        # for x in self._tvars:
+        #     zerefed = []
+        #     if len(self._xvarsnb[x-1]) <= 2:
+        #         if len(self._xvarsnb[x-1]) == 2:
+        #             print(x)
+        #             print(self._xor2add[self._xvarsnb[x-1][1]])
+        #             self._xor2add[self._xvarsnb[x-1][1]] = [list(set(self._xor2add[self._xvarsnb[x-1][1]][0]) ^ set(self._xor2add[self._xvarsnb[x-1][0]][0])),self._xor2add[self._xvarsnb[x-1][1]][1] ^ self._xor2add[self._xvarsnb[x-1][0]][1]]
+        #         self._xornadd.append(self._xvarsnb[x-1][0])
+        #         zerefed.append(self._xvarsnb[x-1][0])
+        #     deleteAll(self._xor2add,zerefed)
+        for x in self._xor2add:
+            self.addXlause(x[0],x[1])
+
+    def buildDataStructure(self):
+        print("c " + str(self._gatherXlausesFromClauses()) + " Xlauses found")
+        self._createMatrix()
 
     def bite(self):
         """Sert a faire des Gauss"""
@@ -189,7 +226,7 @@ if __name__ == '__main__':
     xolver.printClauses()
     print("")
     print("Xlause detection !!!")
-    print( str(xolver.ctox()) + " Xlause(s) found !" )
+    xolver.buildDataStructure()
     print("")
     print("Clauses :")
     xolver.printClauses()
@@ -200,5 +237,10 @@ if __name__ == '__main__':
     print("")
     print("Xlauses after getting laid :")
     xolver.printXlauses()
+    # print("")
+    # print(xolver._xvars)
+    # print("")
+    # for x in xolver._xlauses:
+    #     print(x.elements())
     exit()
     
