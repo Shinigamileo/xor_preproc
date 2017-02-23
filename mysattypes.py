@@ -14,15 +14,15 @@ def litToInt(l):
 def varToInt(v): return v+1
 
 # Vars are variable indexes suitable for array indexing (0...n-1)
-def varToLit(v, sign=0):
-    return (v << 1) + sign
+def var2lit(v, sign=1):
+    return 2*v*sign - v
 
 def signLit(l):
-    return l%2 
+    return l>0
 
 def notLit(l):
     """Given the litteral l, give its negation (x <-> -x)"""
-    return l ^ 1
+    return -l
 
 def litToVar(l):
     return l >> 1
@@ -31,31 +31,35 @@ def litToVarSign(l):
     return litToVar(l), signLit(l)
 
 
-############################################################################################
+##############################################################################
 class Clause():
     ''' Very simple clause wrapper.
     TODO: Needs to add a sorting technique for building the clause'''
-    literals = None   # Array of literals
-    useless = False
 
     def __init__(self, listOfLiterals = []):
         self.literals = dict()
+        self.useless = set()
         for l in listOfLiterals:
             self.addLiteral(l)
-        return
 
     def addLiteral(self, lit):
         var = abs(lit)
         sign = lit/var
         if var in self.literals and self[var] != lit:
-            self.useless = True
+            self.useless.add(var)
         self[var] = lit
+
+    def addSwap(self, var, lit):
+        if var in self.literals:
+            self[var].add( lit )
+        else:
+            self[var] = set([lit])
 
     def removeVariable(self, var):
         self.literals.pop(var)
 
     def containsVariable(self,var):
-        return (var in self.literals) and (self[var]/var)
+        return (var in self.literals) and self[var]
 
     def variables(self):
         return list(self.literals.keys())
@@ -69,20 +73,32 @@ class Clause():
 
     def polarity(self):
         return reduce(lambda res, l: ( res ^ 1 ^ signLit(l) ),
-                      [0] + self.litterals())
+                      [1] + self.litterals())
 
+    
+    def dimacstr(self):
+        return " ".join(list(map(lambda l:str(l),self.litterals()))) + " 0"
 
     # We (re)define now some classical Python methods
 
+    def __iter__(self):
+        return iter(self.literals)
+    
     def __str__(self):
         ''' Gets the clause as a list of literals '''
         return ",".join(list(map(lambda l:str(l),self.litterals())))
+
+    def __contains__(self, itm):
+        return itm in self.literals
 
     def __getitem__(self, x):
         return self.literals[x]
 
     def __setitem__(self, x, itm):
         self.literals[x] = itm
+
+    def __nonzero__(self):
+        return not self.useless
 
     def __len__(self):
         return len(self.literals)
