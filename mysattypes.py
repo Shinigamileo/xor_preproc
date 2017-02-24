@@ -98,7 +98,7 @@ class Clause():
         self.literals[x] = itm
 
     def __nonzero__(self):
-        return not self.useless
+        return bool(self.useless)
 
     def __len__(self):
         return len(self.literals)

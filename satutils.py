@@ -1,6 +1,8 @@
 from heapq import *
 from array import *
 
+from BitVector import BitVector
+
 import gzip, copy
 
 # Small functions to facilitate the map integers with internal values of the solver
@@ -78,45 +80,71 @@ def luby(y,x): # copied from Minisat implementation
 #############
 
 class BinEquation():
-    _intsize = 0
-    _vector = []
-    _nbvars = 0
-    result = 0
-
-    def __init__(self, binvars=[], result=0, intsize = 62):
-        self._intsize = intsize
-        self._nbvars = len(binvars)
-        # And ladies and gentleman, here's the moment you craved for :...
-        # THE MINUS OVER NINE THOUSAND FLOWEY TIME !!!!!
-        self._vector = [int("".join(list(map(lambda e:str(e),binvars[max(i-intsize,0):i][::-1]))),2) for i in range(self._nbvars,0,-intsize) if i][::-1]
-        # self._vector = binvars[0:]
+    def __init__(self, binvars=[0], result=0):
+        self._vector = BitVector(bitlist=binvars)
         self.result = result
 
     def elements(self):
         return [i for i in range(len(self)) if self[i]]
 
     def __add__(self, other):
-        res = BinEquation(result = self.result ^ other.result,
-                          intsize = self._intsize)
-        res._nbvars = self._nbvars
-        res._vector = [self._vector[i] ^ other._vector[i]
-                            for i in range(len(self._vector))]
+        res = BinEquation(result = self.result ^ other.result)
+        res._vector = self._vector ^ other._vector
         return res
 
     def __str__(self):
-        filt = "{0:0"+str(self._intsize)+"b}"
-        size = len(self._vector)*self._intsize
-        # You loved it ? Well, prepare yourself to be amazed again :...
-        # THE MINUS OVER NINE THOUSAND FLOWEY ANOTHER TIME !!!!!
-        return "".join(list(map(lambda x:filt.format(x),self._vector)))[size-self._nbvars:size][::-1] + "|" + str(self.result)
+        return str(self._vector) + "|" + str(self.result)
 
     def __getitem__(self, x):
-        xdiv,xmod = divmod(x,self._intsize)
-        return ((self._vector[xdiv])//2**(xmod))%2
+        return self._vector[x]
 
     def __setitem__(self, x, itm):
-        xdiv,xmod = divmod(x,self._intsize)
-        self._vector[xdiv] = (self._vector[xdiv] ^ (self._vector[xdiv] & 2**xmod)) | itm * 2**xmod
+        self._vector[x] = itm
 
     def __len__(self):
-        return self._nbvars
+        return len(self._vector)
+
+# class BinEquation():
+#     _intsize = 0
+#     _vector = []
+#     _nbvars = 0
+#     result = 0
+
+#     def __init__(self, binvars=[], result=0, intsize = 62):
+#         self._intsize = intsize
+#         self._nbvars = len(binvars)
+#         # And ladies and gentleman, here's the moment you craved for :...
+#         # THE MINUS OVER NINE THOUSAND FLOWEY TIME !!!!!
+#         for i in range(self._nbvars,0,-intsize):
+#             print(bin(int("".join(list(map(lambda e:str(e),binvars[max(i-intsize,0):i][::-1]))),2)))
+#         self._vector = [int("".join(list(map(lambda e:str(e),binvars[max(i-intsize,0):i][::-1]))),2) for i in range(self._nbvars,0,-intsize) if i][::-1]
+#         self.result = result
+
+#     def elements(self):
+#         return [i for i in range(len(self)) if self[i]]
+
+#     def __add__(self, other):
+#         res = BinEquation(result = self.result ^ other.result,
+#                           intsize = self._intsize)
+#         res._nbvars = self._nbvars
+#         res._vector = [self._vector[i] ^ other._vector[i]
+#                             for i in range(len(self._vector))]
+#         return res
+
+#     def __str__(self):
+#         filt = "{0:0"+str(self._intsize)+"b}"
+#         size = len(self._vector)*self._intsize
+#         # You loved it ? Well, prepare yourself to be amazed again :...
+#         # THE MINUS OVER NINE THOUSAND FLOWEY ANOTHER TIME !!!!!
+#         return "".join(list(map(lambda x:filt.format(x),self._vector)))[size-self._nbvars:size][::-1] + "|" + str(self.result)
+
+#     def __getitem__(self, x):
+#         xdiv,xmod = divmod(x,self._intsize)
+#         return ((self._vector[xdiv])//2**(xmod))%2
+
+#     def __setitem__(self, x, itm):
+#         xdiv,xmod = divmod(x,self._intsize)
+#         self._vector[xdiv] = (self._vector[xdiv] ^ (self._vector[xdiv] & 2**xmod)) | itm * 2**xmod
+
+#     def __len__(self):
+#         return self._nbvars

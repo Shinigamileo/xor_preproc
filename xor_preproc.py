@@ -132,9 +132,9 @@ class XorSolver():
                 self._learnt.append(self._clauses[i].variables()[0])
         deleteAll(self._clauses,list(clauses2del))
 
-        
-        clauses2del = set()
+
         if self._learnt:
+            clauses2del = set()
             for i in range(len(self._clauses)):
                 for l in self._learnt:
                     cv = self._clauses[i].containsVariable(abs(l))
@@ -144,7 +144,7 @@ class XorSolver():
                             clauses2del.add(i)
                         else:
                             self._clauses[i].removeVariable(abs(l))
-                            self.status |= bool(len(self._clauses[i]))
+                            self.status |= not bool(len(self._clauses[i]))
             deleteAll(self._clauses,list(clauses2del))
 
         
@@ -198,7 +198,7 @@ class XorSolver():
                         # then we found a Xlause !
                         count += 1
                         lines2del += xors[k]
-                        self._xor2add.append([variables,k])
+                        self._xor2add.append([sorted(variables),k])
                         xvars |= set(variables)
                         for v in variables:
                             self._xvarsnb[v-1].append(xor2addi)
@@ -234,6 +234,7 @@ class XorSolver():
         # deleteAll(self._xor2add,zerefed)
         for x in self._xor2add:
             self.addXlause(x[0],x[1])
+            # print(str(x) + " => " + str([list(map(lambda l:self._xvars[l],self._xlauses[-1].elements())),self._xlauses[-1].result]))
 
     def _bite(self):
         """Sert a faire des Gauss"""
@@ -260,6 +261,7 @@ class XorSolver():
             e = x.elements()
             le = len(e)
             if not len(e):
+                None
                 if x.result:
                     self.status = 1
             elif len(e) == 1:
@@ -273,8 +275,9 @@ class XorSolver():
 
     def _propagate1(self):
         didChange = False
-        while self._learningVars():
-            didChange = True
+        self._learningVars()
+        # while self._learningVars():
+        #     didChange = True
         return didChange
 
     def _buildData2_propagate2(self):
@@ -284,7 +287,9 @@ class XorSolver():
         self._createMatrix()
 
     def _propagate2(self):
+        # print(self._xvars)
         didChange = self._bite() > 0
+        # self.printXlauses()
         self._mine()
         self._xlauses = []
         self._xvars = []
@@ -295,6 +300,7 @@ class XorSolver():
     def solve(self):
         doContinue = True
         count = 1
+        # self.printClauses()
         print("c ////////////////////////////")
         print("c // Propagation no. " + str(count))
         print("c ////////////////////////////")
@@ -302,11 +308,19 @@ class XorSolver():
         while doContinue and not self.status:
             count += 1
             self._buildData2_propagate2()
+            # print(self._xor2add)
+            # print(self._xvars)
+            # self.printXlauses()
+            # print("")
             doContinue = self._propagate2()
             print("c ////////////////////////////")
             print("c // Propagation no. " + str(count))
             print("c ////////////////////////////")
             doContinue |= self._propagate1()
+            # doContinue = False
+            # self.printClauses()
+            # print("")
+            # self.printClauses()
         print("c")
         if self.status:
             print("s UNSATISFIABLE")
@@ -320,8 +334,9 @@ class XorSolver():
             print("s SATISFIABLE")
             print(self._known.dimacstr())
         else:
-            print("s UNKNOWN")
+            print("c UNKNOWN")
             print("c Delegating to a \"real\" SAT-solver")
+            print("p cnf " + str(self._nbvars) + " " + str(len(self._clauses) + len(self._known)))
             for v in self._known:
                 print(str(self._known[v]) + " 0")
             for v in self._almostknown:
