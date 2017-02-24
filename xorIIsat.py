@@ -1,7 +1,17 @@
-from mysattypes import *
-from math import *
+import math
 from enum import Enum
 import time, sys, random
+
+from mysattypes import *
+
+thisisxorpreproc = '''
+__  __             ___________   
+\ \/ / ___   _ __ /__  __  __/
+ \  / |   | | '__|  / / / /   ____ ___  ______
+ /  \ | 0 | | |    / / / /   / __// _ |/_  __/
+/_/\_\|___| |_| __/ /_/ /__ _\ \ / __ | / /
+               /__________//___//_/ |_|/_/
+'''
 
 def random_cnf_clauses(solver,k=3,n=20,m=100):
     random.seed() # Uses system time
@@ -43,7 +53,6 @@ class XorSolver():
         self._xornadd      = []
         self._xlauses      = []
         self._xvars        = []
-        self._xvarsnb      = []
         self._tvars        = []
         self._learnt       = []
         self._almostlearnt = []
@@ -95,11 +104,11 @@ class XorSolver():
 
     def _sortingSortSortingThatSorts(self):
         """Sort the clauses according to their variables"""
-        fill0 = int(log10(self._nbvars))+1
+        fill0 = int(math.log10(self._nbvars))+1
         self._clauses.sort( key = lambda c: c.getK(fill0) )
 
     def _noNoDuplicatesNoNoNo(self):
-        fill0 = int(log10(self._nbvars))+1
+        fill0 = int(math.log10(self._nbvars))+1
         for i in range(len(self._clauses)):
             j = i+1
             while j < len(self._clauses) and\
@@ -110,6 +119,8 @@ class XorSolver():
                     j+=1
 
     def _learningVars(self):
+        # print("")
+        # print("LEARNING VARS !!!!!")
         clauses2del = set()
         count = 0
         if self._almostlearnt:
@@ -118,18 +129,22 @@ class XorSolver():
                     cv = self._clauses[i].containsVariable(ls[0])
                     if cv:
                         count += 1
+                        # print(str(self._clauses[i]) + " <==== " + str(ls))
                         self._clauses[i].removeVariable(ls[0])
                         self._clauses[i].addLiteral((cv/abs(cv))*ls[1])
+                        # print(" |==> " + str(self._clauses[i]))
                         if self._clauses[i].useless:
                             clauses2del.add(i)
             deleteAll(self._clauses,list(clauses2del))
                 
 
         clauses2del = set()
+        # print(self._known)
         for i in range(len(self._clauses)):
             if len(self._clauses[i].variables()) == 1:
+                # print("alone : " + str(self._clauses[i]))
                 clauses2del.add(i)
-                self._learnt.append(self._clauses[i].variables()[0])
+                self._learnt.append(self._clauses[i].litterals()[0])
         deleteAll(self._clauses,list(clauses2del))
 
 
@@ -171,9 +186,6 @@ class XorSolver():
         cvars = set()  # The variables present in the clauses
         xvars = set()  # The variables present in the Xlauses
 
-        self._xvarsnb = [[] for i in range(self._nbvars)]
-        xor2addi = len(self._xor2add)
-
         # To begin with, we must gather the Xlauses
         begin = 0
         while begin < len(self._clauses):
@@ -200,9 +212,6 @@ class XorSolver():
                         lines2del += xors[k]
                         self._xor2add.append([sorted(variables),k])
                         xvars |= set(variables)
-                        for v in variables:
-                            self._xvarsnb[v-1].append(xor2addi)
-                        xor2addi += 1
             else:
                 cvars |= set(variables)
             begin = end
@@ -275,9 +284,8 @@ class XorSolver():
 
     def _propagate1(self):
         didChange = False
-        self._learningVars()
-        # while self._learningVars():
-        #     didChange = True
+        while self._learningVars():
+            didChange = True
         return didChange
 
     def _buildData2_propagate2(self):
@@ -354,20 +362,28 @@ class XorSolver():
 #            #
 ##############
 
+def banner():
+    print('\n'.join([ 'c \033[1;31m' + line + '\033[0m' for line in thisisxorpreproc.split('\n')]))
+    print("c                               \033[1;33mBecause I couldn't even find an orginal name... ><'\033[0m\nc")
+    print("c          Made after \033[1;33mpysat\033[0m from L. Simon (2016) and Dr Soos's papers (2003)")
+    print("c          look for \033[1;31mXOR-clauses\033[0m in your formula to simplify")
+    print("c          ...mostly...\nc")
+
+def printUsage():
+    print("")
+    print("xorIIsat solver: it finds XOR !!")
+    print("...YEAAAAAHHHHH !!!")
+
 if __name__ == '__main__':
+    banner()
     xolver = XorSolver()
+    
     if len(sys.argv) > 1:
         readFile(xolver, sys.argv[1])
     else:
-        random_cnf_clauses(xolver,3,5,100)
+        printUsage()
+        sys.exit(1)
+        
     xolver.solve()
-    # print("")
-    # print("")
-    # print("")
-    # xolver.printClauses()
-    # print("")
-    # print(xolver._known)
-    # print("")
-    # print(xolver._almostknown)
     exit()
     
