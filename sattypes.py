@@ -14,15 +14,15 @@ def litToInt(l):
 def varToInt(v): return v+1
 
 # Vars are variable indexes suitable for array indexing (0...n-1)
-def varToLit(v, sign=0):
-    return (v << 1) + sign
+def var2lit(v, sign=1):
+    return 2*v*sign - v
 
 def signLit(l):
-    return l%2 
+    return l>0
 
 def notLit(l):
     """Given the litteral l, give its negation (x <-> -x)"""
-    return l ^ 1
+    return -l
 
 def litToVar(l):
     return l >> 1
@@ -31,103 +31,74 @@ def litToVarSign(l):
     return litToVar(l), signLit(l)
 
 
-############################################################################################
+##############################################################################
 class Clause():
     ''' Very simple clause wrapper.
     TODO: Needs to add a sorting technique for building the clause'''
-    literals = None   # Array of literals
-    learnt = False    # True if this is a learnt clause
-    lbd = 0           # Score introduced in Glucose
-    score = 0.0       # CSIDS score (decaying activity score, if used)
-    abstraction = 0   # A int that acts as a Bloom filter (when I will use it)
-    dll_isSAT = False # True if the clause is SAT under the current partial assignment (used in DLL)
 
-    def __init__(self, listOfLiterals = None, learnt = False, lbd = None):
-        self.literals = array('i')
-        self.score = 0.0
-        self.learnt = learnt
-        self.lbd = lbd if lbd is not None else len(listOfLiterals)
-        self.dll_isSAT = False
-        self.dll_size = len(listOfLiterals)
-        if listOfLiterals is not None:
-           self.literals.fromlist(sorted(list(set(listOfLiterals))))
-        return
+    def __init__(self, listOfLiterals = []):
+        self.literals = dict()
+        self.useless = set()
+        for l in listOfLiterals:
+            self.addLiteral(l)
 
     def addLiteral(self, lit):
-        self.literals.append(lit)
+        var = abs(lit)
+        sign = lit/var
+        if var in self.literals and self[var] != lit:
+            self.useless.add(var)
+        self[var] = lit
 
-    def removeLiteral(self, lit):
-        self.literals.remove(lit)
+    def addSwap(self, var, lit):
+        if var in self.literals:
+            self[var].add( lit )
+        else:
+            self[var] = set([lit])
 
-    def containsLiteral(self,lit):
-        #return self.literals.contains(lit)
-        lint = intToLit(lit)
-        i = 0
-        while i < len(self) and self[i] < lint:
-            i+=1
-        return i < len(self) and self[i] == lint
+    def removeVariable(self, var):
+        self.literals.pop(var)
 
     def containsVariable(self,var):
-        vant = intToLit(var)
-        i = 0
-        while i < len(self) and self[i] < vant:
-            i+=1
-        return i < len(self) and (self[i] == vant or self[i] == vant+1)
+        return (var in self.literals) and self[var]
 
     def variables(self):
-        res = []
-        for i in range(len(self)):
-            res.append(abs(litToInt(self[i])))
-        return res
+        return list(self.literals.keys())
 
-    def getK(self,fill):
-        s = ""
+    def litterals(self):
+        return list(self.literals.values())
+
+    def getK(self,fill=3):
         filt = '{0:0'+str(fill)+'d} '
-        for l in self:
-            s += filt.format(abs(litToInt(l)))
-        return s
-
-    def incScore(self):
-        self.score += self.var_inc
-
-    def getScore(self):
-        return self.score
-
-    def _calcAbstraction(self):
-        """ Computes a simple Bloom filter for the clause """
-        filter = 0
-        for i in range(0, len(self)):
-            filter &= (self[i] << (i % 64))
-
-    def isUseless(self):
-        """Look if a clause is useless, 
-        aka if a literal and its opposite are in it"""
-        for i in range(len(self)-1):
-            if ((self[i+1] == self[i]+1)
-                and (self[i+1]%2)):
-                return True
-        return False
+        return " ".join(list(map(lambda v: filt.format(v),self.variables())))
 
     def polarity(self):
         return reduce(lambda res, l: ( res ^ 1 ^ signLit(l) ),
-                      [0] + list(self.literals))
+                      [1] + self.litterals())
 
+    
+    def dimacstr(self):
+        return " ".join(list(map(lambda l:str(l),self.litterals()))) + " 0"
 
     # We (re)define now some classical Python methods
 
     def __iter__(self):
-        ''' Allows to use the iterator from the array import '''
-        return self.literals.__iter__()
-
+        return iter(self.literals)
+    
     def __str__(self):
         ''' Gets the clause as a list of literals '''
-        return ",".join(list(map(lambda l: str(litToInt(l)), self.literals)))
+        return ",".join(list(map(lambda l:str(l),self.litterals())))
+
+    def __contains__(self, itm):
+        return itm in self.literals
 
     def __getitem__(self, x):
         return self.literals[x]
 
     def __setitem__(self, x, itm):
         self.literals[x] = itm
+
+    def __nonzero__(self):
+        return bool(self.useless)
 
     def __len__(self):
         return len(self.literals)
@@ -137,11 +108,3 @@ class Clause():
 
     def __eq__(self, other):
         return self.literals == other.literals
-
-
-
-
-
-if __name__ == '__main__':
-    c = Clause([0,2,4,6,8])
-    print(str(c) + " --> " + str(c.polarity()))

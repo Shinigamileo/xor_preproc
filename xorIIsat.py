@@ -12,16 +12,6 @@ __  __             ___________
 /_/\_\|___| |_| __/ /_/ /__ _\ \ / __ | / /
                /__________//___//_/ |_|/_/
 '''
-
-def random_cnf_clauses(solver,k=3,n=20,m=100):
-    random.seed() # Uses system time
-    for nc in range(0,m):
-        c = []
-        while len(c) < k:
-            l = (random.randint(1,n)) * (1 if random.randint(0,1) else -1)
-            if not l in c and not -l in c:
-                c.append(l)
-        solver.addClause(c)
     
 
 def readFile(solver, filename):
